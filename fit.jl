@@ -22,7 +22,7 @@ module Fit
 
 using OutName
 
-export FitType, pow, normal, doFit, saveFit, mainFit
+export FitType, pow, normal, poisson, doFit, saveFit, mainFit
 
 using LsqFit # fit library: https://github.com/JuliaNLSolvers/LsqFit.jl
 
@@ -40,6 +40,7 @@ mutable struct FitType
     fit # see LsqFitResult type
     errors
     chisquaredf::Float64
+    r::Float64 # correlation coefficient
 end
 
 # Calculate the power function P(d) = k * (C / d)^(lambda * d)
@@ -63,6 +64,15 @@ pow(d, parameters) = parameters[1] .* (parameters[2] ./ d).^(parameters[3] .* d)
 # @return The resulting array.
 normal(d, parameters) = exp.(-(d - parameters[1]).^2 ./ (2.0 .* parameters[2] .^ 2)) ./ sqrt.(2.0 .* pi .* parameters[2].^2)
 
+# Calculate the poisson distribution P(d) = lambda^d / d! * exp(-lambda)
+#
+# @param d An array of the independent variable.
+# @param parameters An array containing the fit parameter:
+#        parameters[1] = lambda
+#
+# @return The resulting array.
+poisson(d, parameters) = parameters[1].^d ./ factorial.(d) .* exp.(-parameters[1])
+
 # Do the fit and calculate the chi^2 / df value.
 #
 # @param model Function handle with model(x, parameter-array).
@@ -75,9 +85,11 @@ normal(d, parameters) = exp.(-(d - parameters[1]).^2 ./ (2.0 .* parameters[2] .^
 # @return The fitting results as FitType-object.
 function doFit(model, xdata, ydata, p0, ceb = 0.95)
     fit = curve_fit(model, xdata, ydata, p0)
-    errors = estimate_errors(fit, 0.95)
+    errors = estimate_errors(fit, ceb)
     chisquaredf = sum((fit.resid).^2) / fit.dof
-    return(FitType(fit, errors, chisquaredf))
+    fitData = model(xdata, fit.param)
+    r = cov(ydata, fitData) / (sqrt(var(ydata) * var(fitData)))
+    return(FitType(fit, errors, chisquaredf, r))
 end
 
 # Save the fit results.
@@ -85,7 +97,7 @@ end
 # @param outName Provide a name for the output file.
 # @param result The fitting results as FitType-object.
 function saveFit(outName::String, result::FitType)
-    output = "$(result.chisquaredf)"
+    output = "$(result.r) $(result.chisquaredf)"
     for index = 1:length(result.errors)
         output = "$output $(result.fit.param[index]) $(result.errors[index])"
     end
@@ -132,7 +144,7 @@ function mainFit(directory::String, name::String, numberOfVertices::Int, numberO
         saveFit(string(directory, "/", "pow_", theName, ".csv"), powResult)
     catch
         outFile = open(string(directory, "/", "pow_", theName, ".csv"), "w")
-        write(outFile, "0 0 0 0 0 0 0 0")
+        write(outFile, "0 0 0 0 0 0 0 0 0")
         close(outFile)
         println(string(directory, "/", "pow_", theName, ".csv"))
     end
@@ -142,9 +154,19 @@ function mainFit(directory::String, name::String, numberOfVertices::Int, numberO
         saveFit(string(directory, "/", "normal_", theName, ".csv"), normalResult)
     catch
         outFile = open(string(directory, "/", "normal_", theName, ".csv"), "w")
-        write(outFile, "0 0 0 0 0 0")
+        write(outFile, "0 0 0 0 0 0 0")
         close(outFile)
         println(string(directory, "/", "normal_", theName, ".csv"))
+    end
+
+    try
+        poissonResult = doFit(poisson, d, ydata, [1.0])
+        saveFit(string(directory, "/", "poisson_", theName, ".csv"), poissonResult)
+    catch
+        outFile = open(string(directory, "/", "poisson_", theName, ".csv"), "w")
+        write(outFile, "0 0 0 0 0")
+        close(outFile)
+        println(string(directory, "/", "poisson_", theName, ".csv"))
     end
 end
 

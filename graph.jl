@@ -18,7 +18,7 @@
 
 module Graph
 
-export GraphType, initGraph, insertEdge, edgeExists, removeEdge, preferentialAttachment, allPairShortestPath, generateEdgeList, copyAttachment
+export GraphType, initGraph, insertEdge, edgeExists, removeEdge, preferentialAttachment, allPairShortestPath, generateEdgeList, copyAttachment, generateER
 
 # Define a graph.
 #
@@ -224,6 +224,40 @@ function copyAttachment(graph::GraphType, params)
             end
         end
     end
+    return(graph)
+end
+
+# Generate an ER graph where each vertex contains a given number of edges.
+#
+# @param graph The graph where one wants to insert edges.
+# @param params Parameter array to generate the graph. For ER:
+#               The number of edges that should be inserted.
+#
+# @return An ER graph.
+function generateER(graph::GraphType, params)
+    numEdges = params[1]
+    # Check, whether a valid numEdges is given.
+    if (graph.numberOfVertices < (numEdges + 1))
+        error("Invalid numEdges ", string(numEdges), " > numberOfVertices ", string(graph.numberOfVertices))
+    end
+
+    # edges randomly
+    counter = 0
+    while (counter < (numEdges * graph.numberOfVertices))
+        vertex1 = Int(floor(graph.numberOfVertices * rand() + 1))
+        # choose second vertex randomly, such that vertex1 != vertex2
+        vertex2 = vertex1
+        while (vertex2 == vertex1)
+            vertex2 = Int(floor(graph.numberOfVertices * rand() + 1))
+        end
+        # does the edge in question exist
+        if (!edgeExists(graph, vertex1, vertex2))
+            # edge doesn't exist => insert it
+            graph = insertEdge(graph, vertex1, vertex2)
+            counter += 1
+        end
+    end
+
     return(graph)
 end
 

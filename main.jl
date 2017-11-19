@@ -27,32 +27,35 @@ using Fit
 # set seed for the Mersenne Twister random number generator
 srand(42)
 
+numberOfVertices = [50, 100, 200, 400]
 numberOfGraphs = [1000, 3500, 6000, 8500, 10000]
+probabilities = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 directory = ""
 
 # run the simulation
 
-for numberOfVertices in [50, 100, 200, 400]
+for size in numberOfVertices
     for numEdges = 1:2
-        doSimulation(directory, "pa", numberOfVertices, numberOfGraphs, preferentialAttachment, [numEdges])
-        for probability in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-            doSimulation(directory, "ca", numberOfVertices, numberOfGraphs, copyAttachment, [numEdges, probability])
+        doSimulation(directory, "pa", size, numberOfGraphs, preferentialAttachment, [numEdges])
+        doSimulation(directory, "er", size, numberOfGraphs, generateER, [numEdges])
+        for probability in probabilities
+            doSimulation(directory, "ca", size, numberOfGraphs, copyAttachment, [numEdges, probability])
         end
     end
 end
 
 # do the fitting business
 
-for numberOfVertices in [50, 100, 200, 400]
-    for numberOfGraphs in [1000, 3500, 6000, 8500, 10000]
+for size in numberOfVertices
+    for sweeps in numberOfGraphs
         for numEdges = 1:2
-            mainFit(directory, "pa", numberOfVertices, numberOfGraphs, [numEdges])
-            for probability in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-                mainFit(directory, "ca", numberOfVertices, numberOfGraphs, [numEdges, probability])
+            mainFit(directory, "pa", size, sweeps, [numEdges])
+            mainFit(directory, "er", size, sweeps, [numEdges])
+            for probability in probabilities
+                mainFit(directory, "ca", size, sweeps, [numEdges, probability])
             end
         end
     end
 end
-
 
 println("Simulations done")

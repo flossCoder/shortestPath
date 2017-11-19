@@ -42,5 +42,14 @@ if (normalTest != 1.0 ./ sqrt.(2.0 .* pi .* sigma.^2) .* exp.(-(d-mu).^2 ./ (2.0
     println("normalTest failed")
 end
 
+# Test the poisson-function.
+d = 1.0:10.0
+lambda = 0.5
+poissonTest = poisson(d, [lambda])
+
+if (poissonTest != lambda .^ d ./ factorial.(d) .* exp.(- lambda))
+    println("poissonTest failed")
+end
+
 println("FitTest done")
 end
